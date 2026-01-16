@@ -39,7 +39,7 @@ const AdblockDetector = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] bg-black bg-opacity-90 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-black bg-opacity-50 flex items-center justify-center"
       // Prevent closing by clicking outside
       onClick={(e) => e.stopPropagation()}
     >
