@@ -1,8 +1,6 @@
-// app/chapter/[slug]/[chapterId]/page.tsx
 import ChapterReaderClient from "@/components/pages/ChapterReaderPage";
 import { Metadata } from "next";
 import { cache } from 'react';
-import Head from 'next/head';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -176,13 +174,6 @@ export default async function ChapterReaderPage({
     if (!selectedNovel || !selectedChapter) {
       return (
         <div className="pt-20 min-h-screen container mx-auto px-4">
-          <Head>
-            {/* Popunder Script */}
-            <script 
-              src="https://thinnerwithdrewforbear.com/00/9d/5b/009d5b42cf6419324538bfb7a531b9d8.js" 
-              async 
-            />
-          </Head>
           <div className="text-center py-12">
             <h2 className="text-2xl font-serif font-bold text-primary-900 mb-4">
               Chapter Not Found
@@ -228,15 +219,6 @@ export default async function ChapterReaderPage({
 
     return (
       <>
-        <Head>
-          {/* Popunder Script */}
-          <script 
-            src="https://thinnerwithdrewforbear.com/00/9d/5b/009d5b42cf6419324538bfb7a531b9d8.js" 
-            async 
-          />
-        </Head>
-
-        {/* Inject Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -258,13 +240,6 @@ export default async function ChapterReaderPage({
     console.error("Error in ChapterReaderPage:", error);
     return (
       <div className="pt-20 min-h-screen container mx-auto px-4">
-        <Head>
-          {/* Popunder Script even on error fallback */}
-          <script 
-            src="https://thinnerwithdrewforbear.com/00/9d/5b/009d5b42cf6419324538bfb7a531b9d8.js" 
-            async 
-          />
-        </Head>
         <div className="text-center py-12">
           <h2 className="text-2xl font-serif font-bold text-primary-900 mb-4">
             Error Loading Chapter
