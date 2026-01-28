@@ -6,7 +6,6 @@ import Providers from "@/store/Providers";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ToasterProvider from "@/store/ToasterProvider";
-import AdblockDetector from "@/components/AdblockDetector"; // Import the component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,7 +53,6 @@ export default function RootLayout({
           {children}
           <Footer />
           <ToasterProvider />
-          <AdblockDetector /> {/* Add the detector here */}
         </Providers>
       </body>
     </html>
