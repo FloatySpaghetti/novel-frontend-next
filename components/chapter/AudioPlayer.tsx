@@ -5,7 +5,6 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Settings } from '
 import { useAppDispatch } from '../../hooks/redux';
 import { updateLocalProgress } from '../../store/slices/progressSlice';
 import { Howl, Howler } from 'howler';
-import { useAdblockDetection } from '@/hooks/useAdblockDetection';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -58,9 +57,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const isInitializing = useRef(false);
   const autoPlayExecuted = useRef(false);
   
-  // NEW: Use shared adblock detection
-  const { isAdblockDetected, isChecking, checkAgain } = useAdblockDetection();
-  
   // Use refs for all props that shouldn't trigger reinitializations
   const currentAutoPlayState = useRef(autoPlay);
   const currentInitialPosition = useRef(initialPosition);
@@ -93,19 +89,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       soundRef.current = null;
     }
   }, []);
-
-  // NEW: Stop audio immediately when adblock is detected
-  useEffect(() => {
-    if (isAdblockDetected && soundRef.current) {
-      console.log('Adblock detected - stopping audio immediately');
-      try {
-        soundRef.current.stop();
-        setIsPlaying(false);
-      } catch (e) {
-        console.warn('Error stopping audio:', e);
-      }
-    }
-  }, [isAdblockDetected]);
 
   // Update refs when props change
   useEffect(() => {
@@ -196,15 +179,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, []);
 
-  // Auto play function - BLOCK if adblock detected
+  // Auto play function
   const attemptAutoPlay = useCallback(() => {
-    // NEW: Block autoplay if adblock detected
-    if (isAdblockDetected) {
-      console.log('Autoplay blocked - adblock detected');
-      setIsLoading(false);
-      return;
-    }
-    
     if (!soundRef.current || !currentAutoPlayState.current || autoPlayExecuted.current) return;
 
     try {
@@ -224,17 +200,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     } catch (err) {
       console.log('Autoplay attempt failed:', err);
     }
-  }, [isAdblockDetected]);
+  }, []);
 
-  // Initialize audio - BLOCK if adblock detected
+  // Initialize audio
   const initializeAudio = useCallback(() => {
-    // NEW: Block initialization if adblock detected
-    if (isAdblockDetected) {
-      console.log('Audio initialization blocked - adblock detected');
-      setIsLoading(false);
-      return;
-    }
-    
     // Prevent multiple initializations
     if (!audioUrl || 
         isInitializing.current || 
@@ -283,8 +252,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             setCurrentTime(currentInitialPosition.current);
           }
 
-          // Attempt autoplay - ONLY if no adblock
-          if (currentAutoPlayState.current && !autoPlayExecuted.current && !isAdblockDetected) {
+          // Attempt autoplay
+          if (currentAutoPlayState.current && !autoPlayExecuted.current) {
             setTimeout(() => {
               attemptAutoPlay();
             }, 100);
@@ -374,9 +343,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       setIsLoading(false);
       isInitializing.current = false;
     }
-  }, [audioUrl, volume, isMuted, cleanup, startProgressTracking, stopProgressTracking, attemptAutoPlay, dispatch, duration, playbackRate, isAdblockDetected]); 
+  }, [audioUrl, volume, isMuted, cleanup, startProgressTracking, stopProgressTracking, attemptAutoPlay, dispatch, duration, playbackRate]); 
 
-  // Initialize only when audioUrl changes or adblock status changes
+  // Initialize only when audioUrl changes
   useEffect(() => {
     lastInitializedUrl.current = '';
     isInitializing.current = false;
@@ -389,7 +358,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [audioUrl, isAdblockDetected]);
+  }, [audioUrl]);
 
   // Progress saving interval
   useEffect(() => {
@@ -421,9 +390,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     };
   }, [cleanup]);
 
-  // Control functions - BLOCK if adblock detected
+  // Control functions
   const togglePlay = () => {
-    if (!soundRef.current || isLoading || error || isAdblockDetected) return;
+    if (!soundRef.current || isLoading || error) return;
     
     try {
       if (isPlaying) {
@@ -438,7 +407,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!soundRef.current || isLoading || error || isAdblockDetected) return;
+    if (!soundRef.current || isLoading || error) return;
     
     const newTime = parseFloat(e.target.value);
     if (newTime >= 0 && newTime <= duration) {
@@ -448,7 +417,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!soundRef.current || isAdblockDetected) return;
+    if (!soundRef.current) return;
     
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
@@ -462,7 +431,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const toggleMute = () => {
-    if (!soundRef.current || isAdblockDetected) return;
+    if (!soundRef.current) return;
     
     const newMuteState = !isMuted;
     setIsMuted(newMuteState);
@@ -470,7 +439,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const skipBackward = () => {
-    if (!soundRef.current || isLoading || error || isAdblockDetected) return;
+    if (!soundRef.current || isLoading || error) return;
     
     const newTime = Math.max(0, currentTime - 10);
     soundRef.current.seek(newTime);
@@ -478,7 +447,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const skipForward = () => {
-    if (!soundRef.current || isLoading || error || isAdblockDetected) return;
+    if (!soundRef.current || isLoading || error) return;
     
     const newTime = Math.min(duration, currentTime + 10);
     soundRef.current.seek(newTime);
@@ -513,41 +482,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }, 500);
   };
 
-  // NEW: Check again for adblock
-  const handleCheckAgain = async () => {
-    const blocked = await checkAgain();
-    if (!blocked) {
-      window.location.reload();
-    }
-  };
-
   // Don't render if no audio URL
   if (!audioUrl) {
     return (
       <div className="rounded-lg shadow-md p-4">
         <div className="p-3 bg-gray-50 text-gray-700 rounded-md text-sm">
           No audio available for this chapter
-        </div>
-      </div>
-    );
-  }
-
-  // NEW: Show adblock message if detected
-  if (isAdblockDetected) {
-    return (
-      <div className="rounded-lg shadow-md p-4">
-        <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-          <p className="mb-2">Audio playback is disabled because an ad blocker was detected.</p>
-          <p className="mb-3">Please disable your ad blocker to listen to audio.</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={handleCheckAgain}
-              disabled={isChecking}
-              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
-            >
-              {isChecking ? 'Checking...' : 'Check Again (After Disabling Adblock)'}
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -585,7 +525,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
               value={currentTime}
               onChange={handleSeek}
               className="absolute w-full h-full opacity-0 cursor-pointer"
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
             />
           </div>
           <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -598,7 +538,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           <div className="flex items-center space-x-4">
             <button
               onClick={skipBackward}
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
               className="text-gray-700 hover:text-primary-600 disabled:text-gray-400"
             >
               <SkipBack size={20} />
@@ -606,9 +546,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
             <button
               onClick={togglePlay}
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
               className={`${
-                isLoading || error || isAdblockDetected
+                isLoading || error
                   ? 'bg-gray-400'
                   : 'bg-primary-600 hover:bg-primary-700'
               } text-white rounded-full p-3 transition-colors`}
@@ -624,7 +564,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
             <button
               onClick={skipForward}
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
               className="text-gray-700 hover:text-primary-600 disabled:text-gray-400"
             >
               <SkipForward size={20} />
@@ -636,7 +576,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                disabled={isLoading || !!error || isAdblockDetected}
+                disabled={isLoading || !!error}
                 className="text-gray-700 hover:text-primary-600 disabled:text-gray-400 flex items-center"
               >
                 <Settings size={20} />
@@ -667,7 +607,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
             <button
               onClick={toggleMute}
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
               className="text-gray-700 hover:text-primary-600 disabled:text-gray-400"
             >
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -681,7 +621,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
               value={volume}
               onChange={handleVolumeChange}
               className="w-20 accent-primary-600"
-              disabled={isLoading || !!error || isAdblockDetected}
+              disabled={isLoading || !!error}
             />
           </div>
         </div>
