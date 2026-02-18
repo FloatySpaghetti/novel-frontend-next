@@ -1,13 +1,14 @@
 "use client";
+
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Head from "next/head"; // ✅ Added for SocialBar script
 import { useAppSelector } from "@/hooks/redux";
 import AudioPlayer from "@/components/chapter/AudioPlayer";
 import ChapterNavigation from "@/components/chapter/ChapterNavigation";
 import ChapterSelector from "@/components/chapter/ChapterSelector";
 import AdBanner from '@/components/ads/adbanner';
-import SocialBar from '@/components/ads/SocialBar'; //  Add this import
 import { ArrowLeft, BookOpen, PlayCircle } from "lucide-react";
 
 interface ChapterPreferences {
@@ -53,7 +54,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
 }) => {
   const { userProgress } = useAppSelector((state) => state.progress);
   const { user } = useAppSelector((state) => state.auth);
-  // Access global theme state from Redux
   const { isDarkMode } = useAppSelector((state) => state.theme);
   const router = useRouter();
 
@@ -81,7 +81,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
   const [isChapterSelectorOpen, setIsChapterSelectorOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Sync local theme with global Redux theme
   useEffect(() => {
     setPreferences((prev) => ({
       ...prev,
@@ -89,7 +88,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
     }));
   }, [isDarkMode]);
 
-  // Save preferences to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -100,24 +98,21 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
     }
   }, [preferences]);
 
-  // Get progress data
   const progressKey = novelId && chapterId ? `${novelId}-${chapterId}` : "";
   const savedProgress = userProgress[progressKey];
   const initialPosition = savedProgress?.audio_position || 0;
 
-  // Find next chapter for autoplay navigation
   const findNextChapter = useCallback(() => {
     const currentIndex = chapters.findIndex(
       (chapter) => chapter.chapter_number.toString() === chapterId
     );
-    
+
     if (currentIndex >= 0 && currentIndex < chapters.length - 1) {
       return chapters[currentIndex + 1];
     }
     return null;
   }, [chapters, chapterId]);
 
-  // Handle chapter end - navigate to next chapter if autoplay is enabled
   const handleChapterEnd = useCallback(() => {
     if (!preferences.autoPlayEnabled) {
       return;
@@ -130,7 +125,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
 
     setIsNavigating(true);
 
-    // Use Next.js router for better performance, fallback to window.location
     try {
       const nextUrl = `/novel/${slug}/chapter/${nextChapter.chapter_number}`;
       router.push(nextUrl);
@@ -140,7 +134,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
     }
   }, [preferences.autoPlayEnabled, findNextChapter, slug, router]);
 
-  // Reset navigation state when chapter changes
   useEffect(() => {
     setIsNavigating(false);
   }, [chapterId]);
@@ -185,7 +178,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
       .join("\n\n");
   };
 
-  // Validate audio URL
   const isValidAudioUrl = (url: string | null | undefined): boolean => {
     if (!url || typeof url !== 'string') return false;
     try {
@@ -196,218 +188,231 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
     }
   };
 
-  // Get clean audio URL
   const audioUrl = selectedChapter?.audio_url;
   const hasValidAudio = isValidAudioUrl(audioUrl);
 
   return (
-    <div
-      className={`pt-16 min-h-screen ${
-        preferences.theme === "dark"
-          ? "bg-gray-900 text-gray-200"
-          : "bg-gray-50 text-gray-800"
-      }`}
-    >
-      {/* Navigation Loading Indicator */}
-      {isNavigating && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-primary-600 text-white p-2 text-center text-sm">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Loading next chapter...
-          </div>
-        </div>
-      )}
+    <>
+      {/* ✅ Inject SocialBar Script Here */}
+      <Head>
+        <script
+          src="https://degreeeruptionpredator.com/27/d7/28/27d72879876998e556c48fcae6fb7203.js"
+          async
+          defer
+        ></script>
+      </Head>
 
-      {/* Novel/Chapter Info Bar */}
       <div
-        className={`sticky top-16 z-30 ${
-          preferences.theme === "dark" ? "bg-gray-800" : "bg-white"
-        } shadow-md`}
+        className={`pt-16 min-h-screen ${
+          preferences.theme === "dark"
+            ? "bg-gray-900 text-gray-200"
+            : "bg-gray-50 text-gray-800"
+        }`}
       >
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center">
-              <Link href={`/novel/${slug}`} className="flex items-center">
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                <div>
-                  <h2 className="font-serif font-bold text-lg line-clamp-1">
-                    {selectedNovel.title}
-                  </h2>
-                  <p
-                    className={`text-sm ${
-                      preferences.theme === "dark"
-                        ? "text-gray-400"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    Chapter {selectedChapter.chapter_number}:{" "}
-                    {selectedChapter.title}
-                  </p>
-                </div>
-              </Link>
+        {/* Navigation Loading Indicator */}
+        {isNavigating && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-primary-600 text-white p-2 text-center text-sm">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Loading next chapter...
             </div>
+          </div>
+        )}
 
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleAutoPlay}
-                className={`relative p-2 rounded-full flex flex-col items-center justify-center transition-all duration-200 ${
-                  preferences.autoPlayEnabled
-                    ? "bg-primary-100 text-primary-600 ring-2 ring-primary-300"
-                    : preferences.theme === "dark"
-                    ? "hover:bg-gray-700"
-                    : "hover:bg-gray-100"
-                }`}
-                aria-label="Toggle auto-play"
-                title={
-                  preferences.autoPlayEnabled
-                    ? "Auto-play enabled"
-                    : "Auto-play disabled"
-                }
-              >
-                <PlayCircle className={`w-5 h-5 ${preferences.autoPlayEnabled ? 'animate-pulse' : ''}`} />
-                <span className="absolute top-8 text-[10px] sm:block hidden leading-none">
-                  AutoPlay
-                </span>
-                {preferences.autoPlayEnabled && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                )}
-              </button>
+        {/* Novel/Chapter Info Bar */}
+        <div
+          className={`sticky top-16 z-30 ${
+            preferences.theme === "dark" ? "bg-gray-800" : "bg-white"
+          } shadow-md`}
+        >
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center">
+                <Link href={`/novel/${slug}`} className="flex items-center">
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  <div>
+                    <h2 className="font-serif font-bold text-lg line-clamp-1">
+                      {selectedNovel.title}
+                    </h2>
+                    <p
+                      className={`text-sm ${
+                        preferences.theme === "dark"
+                          ? "text-gray-400"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      Chapter {selectedChapter.chapter_number}:{" "}
+                      {selectedChapter.title}
+                    </p>
+                  </div>
+                </Link>
+              </div>
 
-              <button
-                onClick={decreaseFontSize}
-                className={`p-2 rounded-full ${
-                  preferences.theme === "dark"
-                    ? "hover:bg-gray-700"
-                    : "hover:bg-gray-100"
-                }`}
-                aria-label="Decrease font size"
-              >
-                <span className="font-medium">A-</span>
-              </button>
-              <button
-                onClick={increaseFontSize}
-                className={`p-2 rounded-full ${
-                  preferences.theme === "dark"
-                    ? "hover:bg-gray-700"
-                    : "hover:bg-gray-100"
-                }`}
-                aria-label="Increase font size"
-              >
-                <span className="font-medium">A+</span>
-              </button>
-              <button
-                onClick={() => setIsChapterSelectorOpen(true)}
-                className={`p-2 rounded-full ${
-                  preferences.theme === "dark"
-                    ? "hover:bg-gray-700"
-                    : "hover:bg-gray-100"
-                }`}
-                aria-label="Chapter list"
-              >
-                <BookOpen className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleAutoPlay}
+                  className={`relative p-2 rounded-full flex flex-col items-center justify-center transition-all duration-200 ${
+                    preferences.autoPlayEnabled
+                      ? "bg-primary-100 text-primary-600 ring-2 ring-primary-300"
+                      : preferences.theme === "dark"
+                      ? "hover:bg-gray-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                  aria-label="Toggle auto-play"
+                  title={
+                    preferences.autoPlayEnabled
+                      ? "Auto-play enabled"
+                      : "Auto-play disabled"
+                  }
+                >
+                  <PlayCircle className={`w-5 h-5 ${preferences.autoPlayEnabled ? 'animate-pulse' : ''}`} />
+                  <span className="absolute top-8 text-[10px] sm:block hidden leading-none">
+                    AutoPlay
+                  </span>
+                  {preferences.autoPlayEnabled && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  )}
+                </button>
+
+                <button
+                  onClick={decreaseFontSize}
+                  className={`p-2 rounded-full ${
+                    preferences.theme === "dark"
+                      ? "hover:bg-gray-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                  aria-label="Decrease font size"
+                >
+                  <span className="font-medium">A-</span>
+                </button>
+                <button
+                  onClick={increaseFontSize}
+                  className={`p-2 rounded-full ${
+                    preferences.theme === "dark"
+                      ? "hover:bg-gray-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                  aria-label="Increase font size"
+                >
+                  <span className="font-medium">A+</span>
+                </button>
+                <button
+                  onClick={() => setIsChapterSelectorOpen(true)}
+                  className={`p-2 rounded-full ${
+                    preferences.theme === "dark"
+                      ? "hover:bg-gray-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                  aria-label="Chapter list"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Chapter Content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Audio Player Section */}
-          <div className="mb-6">
-            {hasValidAudio ? (
-              <AudioPlayer
-                audioUrl={audioUrl}
-                initialPosition={initialPosition}
-                novelId={novelId}
-                chapterId={chapterId}
-                userId={user?.id}
-                autoPlay={preferences.autoPlayEnabled}
-                onEnded={handleChapterEnd}
-              />
-            ) : (
-              <div className={`p-4 rounded-lg text-center ${
-                preferences.theme === "dark" 
-                  ? "bg-gray-800 text-gray-400" 
-                  : "bg-gray-50 text-gray-700"
+
+        {/* Chapter Content */}
+        <div className="container mx-auto px-4 py-6">
+          <div className="max-w-3xl mx-auto">
+            {/* Audio Player Section */}
+            <div className="mb-6">
+              {hasValidAudio ? (
+                <AudioPlayer
+                  audioUrl={audioUrl}
+                  initialPosition={initialPosition}
+                  novelId={novelId}
+                  chapterId={chapterId}
+                  userId={user?.id}
+                  autoPlay={preferences.autoPlayEnabled}
+                  onEnded={handleChapterEnd}
+                />
+              ) : (
+                <div className={`p-4 rounded-lg text-center ${
+                  preferences.theme === "dark" 
+                    ? "bg-gray-800 text-gray-400" 
+                    : "bg-gray-50 text-gray-700"
+                }`}>
+                  <p className="text-sm">Audio not available for this chapter</p>
+                </div>
+              )}
+            </div>
+
+            {/* Audio troubleshooting note - only show if audio should be available */}
+            {hasValidAudio && (
+              <div className={`mb-4 p-4 rounded-lg ${
+                preferences.theme === "dark"
+                  ? "bg-yellow-900/20 text-yellow-300"
+                  : "bg-warning-50 text-warning-800"
               }`}>
-                <p className="text-sm">Audio not available for this chapter</p>
+                <p className="text-sm">
+                  <strong>Audio Troubleshooting:</strong> If audio isn't playing, try refreshing the page. 
+                  AutoPlay may be blocked by your browser - this is normal. If audio fails to start automatically, 
+                  you can click the play button manually.
+                </p>
               </div>
             )}
-          </div>
 
-          {/* Audio troubleshooting note - only show if audio should be available */}
-          {hasValidAudio && (
-            <div className={`mb-4 p-4 rounded-lg ${
-              preferences.theme === "dark"
-                ? "bg-yellow-900/20 text-yellow-300"
-                : "bg-warning-50 text-warning-800"
-            }`}>
-              <p className="text-sm">
-                <strong>Audio Troubleshooting:</strong> If audio isn&apos;t playing, try refreshing the page. 
-                AutoPlay may be blocked by your browser - this is normal. If audio fails to start automatically, 
-                you can click the play button manually.
-              </p>
+            {/* Chapter Navigation */}
+            <div className="mb-6">
+              <ChapterNavigation
+                chapters={chapters}
+                currentChapterId={chapterId || ""}
+                novelSlug={slug || ""}
+                onListClick={() => setIsChapterSelectorOpen(true)}
+              />
             </div>
-          )}
 
-          {/* Chapter Navigation */}
-          <div className="mb-6">
-            <ChapterNavigation
-              chapters={chapters}
-              currentChapterId={chapterId || ""}
-              novelSlug={slug || ""}
-              onListClick={() => setIsChapterSelectorOpen(true)}
+            {/* Ad Slot 1 - Centered */}
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex justify-center">
+                <AdBanner />
+              </div>
+            </div>
+
+            {/* Chapter Text Content */}
+            <div
+              className={`prose max-w-none ${
+                preferences.theme === "dark" ? "prose-invert" : ""
+              }`}
+              style={{ fontSize: `${preferences.fontSize}px` }}
+              dangerouslySetInnerHTML={{
+                __html: formatChapterContent(selectedChapter.content_text),
+              }}
             />
-          </div>
 
-          {/* Ad Slot 1 - Centered */}
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex justify-center">
-              <AdBanner /> {/* Remove loadDelay prop */}
+            {/* Ad Slot 2 - Before Bottom Navigation */}
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex justify-center">
+                <AdBanner />
+              </div>
             </div>
-          </div>
 
-          {/* Chapter Text Content */}
-          <div
-            className={`prose max-w-none ${
-              preferences.theme === "dark" ? "prose-invert" : ""
-            }`}
-            style={{ fontSize: `${preferences.fontSize}px` }}
-            dangerouslySetInnerHTML={{
-              __html: formatChapterContent(selectedChapter.content_text),
-            }}
-          />
-
-          {/* Ad Slot 2 - Before Bottom Navigation */}
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex justify-center">
-              <AdBanner />
+            {/* Bottom Chapter Navigation */}
+            <div className="mt-12">
+              <ChapterNavigation
+                chapters={chapters}
+                currentChapterId={chapterId || ""}
+                novelSlug={slug || ""}
+                onListClick={() => setIsChapterSelectorOpen(true)}
+              />
             </div>
-          </div>
-
-          {/* Bottom Chapter Navigation */}
-          <div className="mt-12">
-            <ChapterNavigation
-              chapters={chapters}
-              currentChapterId={chapterId || ""}
-              novelSlug={slug || ""}
-              onListClick={() => setIsChapterSelectorOpen(true)}
-            />
           </div>
         </div>
-      </div>
 
-      {/* Chapter Selector Modal */}
-      <ChapterSelector
-        chapters={chapters}
-        currentChapterId={chapterId || ""}
-        novelSlug={slug || ""}
-        isOpen={isChapterSelectorOpen}
-        onClose={() => setIsChapterSelectorOpen(false)}
-      />
-    </div>
+        {/* ✅ Optional Placeholder for SocialBar Widget */}
+        <div id="mNccContainer" style={{ minHeight: '50px' }}></div>
+
+        {/* Chapter Selector Modal */}
+        <ChapterSelector
+          chapters={chapters}
+          currentChapterId={chapterId || ""}
+          novelSlug={slug || ""}
+          isOpen={isChapterSelectorOpen}
+          onClose={() => setIsChapterSelectorOpen(false)}
+        />
+      </div>
+    </>
   );
 };
 
