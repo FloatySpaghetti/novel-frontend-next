@@ -10,13 +10,20 @@ export default function SocialBarLoader() {
   const [shouldLoad, setShouldLoad] = useState(false);
 
   useEffect(() => {
-    // Check if we're on a chapter page
-    if (pathname && /^\/novel\/.+\/chapter\/.+$/.test(pathname)) {
+    const isChapterPage = pathname && /^\/novel\/.+\/chapter\/.+$/.test(pathname);
+    console.log('Current Path:', pathname);
+    console.log('Is Chapter Page?', isChapterPage);
+
+    if (isChapterPage) {
       setShouldLoad(true);
     }
   }, [pathname]);
 
-  if (!shouldLoad) return null;
+  if (!shouldLoad) {
+    return null;
+  }
+
+  console.log('Rendering SocialBar script');
 
   return (
     <Script
