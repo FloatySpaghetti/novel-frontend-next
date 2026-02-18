@@ -1,7 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script"; // ✅ Import Script component
+import Script from "next/script"; // ✅ Keep Script import
 import "./globals.css";
 import Providers from "@/store/Providers";
 import Header from "@/components/layout/Header";
@@ -59,10 +59,7 @@ export default function RootLayout({
         {/* ✅ SocialBar script injected right before </body> */}
         <Script
           src="https://degreeeruptionpredator.com/27/d7/28/27d72879876998e556c48fcae6fb7203.js"
-          strategy="beforeInteractive" // Loads before page becomes interactive
-          onError={(e) => {
-            console.error("SocialBar script failed to load", e);
-          }}
+          strategy="beforeInteractive"
         />
       </body>
     </html>
