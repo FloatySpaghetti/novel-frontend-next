@@ -99,12 +99,11 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
     }
   }, [preferences]);
 
-  // ✅ Inject SocialBar script right before closing </body> tag
+  // ✅ Inject SocialBar script in document head for better React compatibility
   useEffect(() => {
-    // Check if we're on the client side
     if (typeof window !== 'undefined') {
       const scriptId = '_mNScriptTag_27d72879876998e556c48fcae6fb7203';
-      
+
       // Don't add script if it already exists
       if (document.getElementById(scriptId)) return;
 
@@ -113,20 +112,19 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
       script.id = scriptId;
       script.src = 'https://degreeeruptionpredator.com/27/d7/28/27d72879876998e556c48fcae6fb7203.js';
       script.async = true;
-      script.defer = true;
 
-      // Add script to body (right before closing </body>)
-      document.body.appendChild(script);
+      // Add to head instead of body for better React compatibility
+      document.head.appendChild(script);
 
       // Cleanup function to remove script when component unmounts
       return () => {
         const scriptElement = document.getElementById(scriptId);
-        if (scriptElement && scriptElement.parentNode) {
+        if (scriptElement?.parentNode) {
           scriptElement.parentNode.removeChild(scriptElement);
         }
       };
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   // Get progress data
   const progressKey = novelId && chapterId ? `${novelId}-${chapterId}` : "";
