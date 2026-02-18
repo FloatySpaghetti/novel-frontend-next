@@ -7,6 +7,7 @@ import AudioPlayer from "@/components/chapter/AudioPlayer";
 import ChapterNavigation from "@/components/chapter/ChapterNavigation";
 import ChapterSelector from "@/components/chapter/ChapterSelector";
 import AdBanner from '@/components/ads/adbanner';
+import SocialBar from '@/components/ads/SocialBar'; //  Add this import
 import { ArrowLeft, BookOpen, PlayCircle } from "lucide-react";
 
 interface ChapterPreferences {
