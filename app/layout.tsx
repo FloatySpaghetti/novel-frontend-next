@@ -6,7 +6,6 @@ import Providers from "@/store/Providers";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ToasterProvider from "@/store/ToasterProvider";
-import SocialBarLoader from '@/components/ads/SocialBarLoader';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,7 +54,6 @@ export default function RootLayout({
           <Footer />
           <ToasterProvider />
         </Providers>
-        <SocialBarLoader />
       </body>
     </html>
   );
