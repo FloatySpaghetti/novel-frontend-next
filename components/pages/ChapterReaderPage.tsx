@@ -79,6 +79,7 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
   );
   const [isChapterSelectorOpen, setIsChapterSelectorOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isHelpPopupOpen, setIsHelpPopupOpen] = useState(false);
 
   // Sync local theme with global Redux theme
   useEffect(() => {
@@ -363,18 +364,19 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
             )}
           </div>
 
-          {/* Audio troubleshooting note - only show if audio should be available */}
+          {/* Audio troubleshooting trigger button */}
           {hasValidAudio && (
-            <div className={`mb-4 p-4 rounded-lg ${
-              preferences.theme === "dark"
-                ? "bg-yellow-900/20 text-yellow-300"
-                : "bg-warning-50 text-warning-800"
-            }`}>
-              <p className="text-sm">
-                <strong>Audio Troubleshooting:</strong> If audio isn't playing, try refreshing the page. 
-                AutoPlay may be blocked by your browser - this is normal. If audio fails to start automatically, 
-                you can click the play button manually.
-              </p>
+            <div className="flex justify-center mb-4">
+              <button
+                onClick={() => setIsHelpPopupOpen(true)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  preferences.theme === "dark"
+                    ? "bg-blue-900/30 text-blue-300 hover:bg-blue-800/40"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                }`}
+              >
+                Need help with the audio playback?
+              </button>
             </div>
           )}
 
@@ -433,6 +435,65 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
         isOpen={isChapterSelectorOpen}
         onClose={() => setIsChapterSelectorOpen(false)}
       />
+
+      {/* Audio Troubleshooting Popup */}
+      {isHelpPopupOpen && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close popup when clicking on backdrop (outside the popup content)
+            if (e.target === e.currentTarget) {
+              setIsHelpPopupOpen(false);
+            }
+          }}
+        >
+          {/* Backdrop with slight blur */}
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+          
+          {/* Popup content */}
+          <div className={`relative rounded-lg max-w-md w-full p-6 z-10 ${
+            preferences.theme === "dark" ? "bg-gray-800" : "bg-white"
+          } shadow-xl`}>
+            <h3 className="font-bold text-lg mb-4">Audio Playback Help</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold mb-2">Troubleshoots:</h4>
+                <p className="mb-3"><strong>Auto-play not working?</strong></p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>Make sure that the Auto-play button is enabled</li>
+                  <li>Then refresh the page</li>
+                </ol>
+              </div>
+              
+              <p className={`${preferences.theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                You should be automatically redirected to the next chapter once the current audio finished playing, 
+                and the audio will play after being loaded.
+              </p>
+              
+              <div className={`p-3 rounded ${
+                preferences.theme === "dark" ? "bg-gray-700" : "bg-gray-100"
+              }`}>
+                <p><strong>Encountering any other issue?</strong></p>
+                <p>You can contact us through our Discord server at the bottom of the page!</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setIsHelpPopupOpen(false)}
+                className={`px-4 py-2 rounded font-medium ${
+                  preferences.theme === "dark"
+                    ? "bg-gray-700 hover:bg-gray-600"
+                    : "bg-gray-200 hover:bg-gray-300"
+                }`}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
