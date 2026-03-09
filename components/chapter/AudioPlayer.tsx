@@ -146,11 +146,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [playbackRate, speedOptions]);
 
-  // Simplified volume effects - allow volumes above 1
+  // Save volume to localStorage
   useEffect(() => {
     localStorage.setItem('audioVolume', volume.toString());
-    // Apply to global Howler volume
-    Howler.volume(1.0); // Keep global at 1 to avoid conflicts
   }, [volume]);
 
   // Save progress
@@ -239,12 +237,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     cleanup();
 
     try {
-      // Create sound with base volume (capped at 1.0 for stability)
       const sound = new Howl({
         src: [audioUrl],
         html5: true,
         preload: true,
-        volume: isMuted ? 0 : Math.min(1, volume), // Cap at 1.0 for initialization
+        volume: isMuted ? 0 : 1, // Always initialize with 1, we'll adjust later
         rate: playbackRate,
         
         onload: () => {
@@ -377,7 +374,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [audioUrl, initializeAudio]); // Added initializeAudio to dependency array
+  }, [audioUrl]); // Simplified dependencies
 
   // Progress saving interval
   useEffect(() => {
@@ -436,20 +433,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!soundRef.current) return;
-    
     const newVolume = parseFloat(e.target.value);
     const clampedVolume = Math.min(2, Math.max(0, newVolume));
     setVolume(clampedVolume);
     
-    // Apply volume directly to the sound instance
-    soundRef.current.volume(isMuted ? 0 : clampedVolume);
-    
-    // Update mute state
-    if (clampedVolume === 0) {
-      setIsMuted(true);
-    } else if (isMuted && clampedVolume > 0) {
-      setIsMuted(false);
+    // Apply volume directly to the sound instance if it exists
+    if (soundRef.current) {
+      soundRef.current.volume(isMuted ? 0 : clampedVolume);
     }
   };
 
