@@ -48,7 +48,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [showVolumeMenu, setShowVolumeMenu] = useState(false); // For volume boost options
+  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   
   const soundRef = useRef<Howl | null>(null);
   const progressInterval = useRef<number | null>(null);
@@ -146,10 +146,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [playbackRate, speedOptions]);
 
-  // Simplified volume effects
+  // Simplified volume effects - allow volumes above 1
   useEffect(() => {
     localStorage.setItem('audioVolume', volume.toString());
-    Howler.volume(Math.min(1, volume)); // Howler volume capped at 1
+    // Howler supports volumes above 1, just need to set it properly
+    Howler.volume(volume);
   }, [volume]);
 
   // Save progress
@@ -242,7 +243,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         src: [audioUrl],
         html5: true,
         preload: true,
-        volume: isMuted ? 0 : Math.min(1, volume), // Cap at 1 for Howler
+        volume: isMuted ? 0 : volume, // Howler.js does support volumes > 1
         rate: playbackRate,
         
         onload: () => {
@@ -275,9 +276,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           console.log('Audio started playing');
           setIsPlaying(true);
           startProgressTracking();
-          
-          // Apply volume boost after playback starts
-          applyVolumeBoost(sound, volume);
         },
         
         onpause: () => {
@@ -358,34 +356,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [audioUrl, volume, isMuted, cleanup, startProgressTracking, stopProgressTracking, attemptAutoPlay, dispatch, duration, playbackRate]); 
 
-  // Apply volume boost using Web Audio API
-  const applyVolumeBoost = (sound: Howl, volumeValue: number) => {
-    if (!sound || volumeValue <= 1) return;
-    
-    // For volumes > 1, we need to use Web Audio API gain node
-    const howlerCtx = Howler.ctx;
-    if (!howlerCtx) return;
-    
-    try {
-      // Create a gain node for amplification
-      const gainNode = howlerCtx.createGain();
-      gainNode.gain.value = volumeValue; // This allows values > 1
-      
-      // Connect to Howler's master gain (requires accessing internal Howler structure)
-      // Note: This is a workaround since Howler doesn't expose gain nodes directly
-      const masterGain = Howler.masterGain;
-      if (masterGain) {
-        // Disconnect master gain from destination
-        masterGain.disconnect();
-        // Connect master gain to our gain node, then to destination
-        masterGain.connect(gainNode);
-        gainNode.connect(howlerCtx.destination);
-      }
-    } catch (e) {
-      console.warn('Volume boost not supported in this browser', e);
-    }
-  };
-
   // Initialize only when audioUrl changes
   useEffect(() => {
     lastInitializedUrl.current = '';
@@ -440,10 +410,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         soundRef.current.pause();
       } else {
         soundRef.current.play();
-        // Reapply volume boost when resuming playback
-        setTimeout(() => {
-          applyVolumeBoost(soundRef.current!, volume);
-        }, 0);
       }
     } catch (err) {
       console.error('Play/pause error:', err);
@@ -468,14 +434,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const clampedVolume = Math.min(2, Math.max(0, newVolume));
     setVolume(clampedVolume);
     
-    // Apply to Howler (capped at 1) and boost separately
-    const howlerVolume = Math.min(1, clampedVolume);
-    soundRef.current.volume(isMuted ? 0 : howlerVolume);
-    
-    // Apply volume boost for values > 1
-    if (clampedVolume > 1) {
-      applyVolumeBoost(soundRef.current, clampedVolume);
-    }
+    // Apply volume directly to Howler (it supports values > 1)
+    soundRef.current.volume(isMuted ? 0 : clampedVolume);
     
     // Update mute state
     if (clampedVolume === 0) {
@@ -490,7 +450,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     
     const newMuteState = !isMuted;
     setIsMuted(newMuteState);
-    soundRef.current.volume(newMuteState ? 0 : Math.min(1, volume));
+    soundRef.current.volume(newMuteState ? 0 : volume);
   };
 
   const skipBackward = () => {
@@ -524,13 +484,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setShowVolumeMenu(false);
     
     if (soundRef.current) {
-      const howlerVolume = Math.min(1, boostLevel);
-      soundRef.current.volume(isMuted ? 0 : howlerVolume);
-      
-      // Apply volume boost for values > 1
-      if (boostLevel > 1) {
-        applyVolumeBoost(soundRef.current, boostLevel);
-      }
+      soundRef.current.volume(isMuted ? 0 : boostLevel);
     }
   };
 
