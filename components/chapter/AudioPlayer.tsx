@@ -22,7 +22,7 @@ const getInitialVolume = (): number => {
     const savedVolume = localStorage.getItem('audioVolume');
     if (savedVolume !== null) {
       const vol = parseFloat(savedVolume);
-      if (!isNaN(vol) && vol >= 0 && vol <= 2) {
+      if (!isNaN(vol) && vol >= 0 && vol <= 1) { // Back to 0-1 range
         return vol;
       }
     }
@@ -48,7 +48,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   
   const soundRef = useRef<Howl | null>(null);
   const progressInterval = useRef<number | null>(null);
@@ -68,17 +67,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   
   const dispatch = useAppDispatch();
 
-  // Speed options - added 3.0 option
+  // Speed options - kept 3.0 option
   const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0];
-  
-  // Volume boost options
-  const volumeBoostOptions = [
-    { label: 'Normal', value: 1.0 },
-    { label: '1.25x', value: 1.25 },
-    { label: '1.5x', value: 1.5 },
-    { label: '1.75x', value: 1.75 },
-    { label: '2x', value: 2.0 }
-  ];
 
   // Simple cleanup function - ALWAYS stop audio
   const cleanup = useCallback(() => {
@@ -146,9 +136,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [playbackRate, speedOptions]);
 
-  // Save volume to localStorage
+  // Simplified volume effects
   useEffect(() => {
     localStorage.setItem('audioVolume', volume.toString());
+    Howler.volume(volume);
   }, [volume]);
 
   // Save progress
@@ -241,7 +232,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         src: [audioUrl],
         html5: true,
         preload: true,
-        volume: isMuted ? 0 : 1, // Always initialize with 1, we'll adjust later
+        volume: isMuted ? 0 : volume,
         rate: playbackRate,
         
         onload: () => {
@@ -259,11 +250,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           if (currentInitialPosition.current > 0 && currentInitialPosition.current < audioDuration) {
             sound.seek(currentInitialPosition.current);
             setCurrentTime(currentInitialPosition.current);
-          }
-
-          // Apply actual volume after loading
-          if (soundRef.current) {
-            soundRef.current.volume(isMuted ? 0 : volume);
           }
 
           // Attempt autoplay
@@ -433,13 +419,19 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    const clampedVolume = Math.min(2, Math.max(0, newVolume));
-    setVolume(clampedVolume);
+    if (!soundRef.current) return;
     
-    // Apply volume directly to the sound instance if it exists
-    if (soundRef.current) {
-      soundRef.current.volume(isMuted ? 0 : clampedVolume);
+    const newVolume = parseFloat(e.target.value);
+    // Cap volume at 1.0 (100%)
+    const clampedVolume = Math.min(1, Math.max(0, newVolume));
+    setVolume(clampedVolume);
+    soundRef.current.volume(isMuted ? 0 : clampedVolume);
+    
+    // Update mute state
+    if (clampedVolume === 0) {
+      setIsMuted(true);
+    } else if (isMuted) {
+      setIsMuted(false);
     }
   };
 
@@ -473,16 +465,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     
     if (soundRef.current) {
       soundRef.current.rate(rate);
-    }
-  };
-
-  // Set volume boost level
-  const setVolumeBoost = (boostLevel: number) => {
-    setVolume(boostLevel);
-    setShowVolumeMenu(false);
-    
-    if (soundRef.current) {
-      soundRef.current.volume(isMuted ? 0 : boostLevel);
     }
   };
 
@@ -628,41 +610,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
               )}
             </div>
 
-            {/* Volume boost dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowVolumeMenu(!showVolumeMenu)}
-                disabled={isLoading || !!error}
-                className="text-gray-700 hover:text-primary-600 disabled:text-gray-400 flex items-center"
-              >
-                <Volume2 size={20} />
-                <span className="ml-1 text-sm">
-                  {volume <= 1 ? `${Math.round(volume * 100)}%` : `${volume.toFixed(1)}x`}
-                </span>
-              </button>
-              
-              {showVolumeMenu && (
-                <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-md shadow-lg py-1 z-10">
-                  {volumeBoostOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setVolumeBoost(option.value)}
-                      className={`block w-full text-left px-4 py-2 text-sm ${
-                        Math.abs(volume - option.value) < 0.05
-                          ? 'bg-primary-100 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {option.label}
-                      {Math.abs(volume - option.value) < 0.05 && (
-                        <span className="ml-2">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <button
               onClick={toggleMute}
               disabled={isLoading || !!error}
@@ -674,7 +621,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <input
               type="range"
               min="0"
-              max="2"
+              max="1" // Back to max 1 (100%)
               step="0.01"
               value={volume}
               onChange={handleVolumeChange}
