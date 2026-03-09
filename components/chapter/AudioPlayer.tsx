@@ -149,8 +149,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // Simplified volume effects - allow volumes above 1
   useEffect(() => {
     localStorage.setItem('audioVolume', volume.toString());
-    // Howler supports volumes above 1, just need to set it properly
-    Howler.volume(volume);
+    // Apply to global Howler volume
+    Howler.volume(1.0); // Keep global at 1 to avoid conflicts
   }, [volume]);
 
   // Save progress
@@ -239,11 +239,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     cleanup();
 
     try {
+      // Create sound with base volume (capped at 1.0 for stability)
       const sound = new Howl({
         src: [audioUrl],
         html5: true,
         preload: true,
-        volume: isMuted ? 0 : volume, // Howler.js does support volumes > 1
+        volume: isMuted ? 0 : Math.min(1, volume), // Cap at 1.0 for initialization
         rate: playbackRate,
         
         onload: () => {
@@ -261,6 +262,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           if (currentInitialPosition.current > 0 && currentInitialPosition.current < audioDuration) {
             sound.seek(currentInitialPosition.current);
             setCurrentTime(currentInitialPosition.current);
+          }
+
+          // Apply actual volume after loading
+          if (soundRef.current) {
+            soundRef.current.volume(isMuted ? 0 : volume);
           }
 
           // Attempt autoplay
@@ -322,19 +328,21 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           }
         },
         
-        onloaderror: () => {
+        onloaderror: (id, err) => {
           if (!isMounted.current) return;
-          setError('Failed to load audio');
+          console.error('Audio load error:', err);
+          setError('Failed to load audio: ' + (err as any)?.message || 'Unknown error');
           setIsLoading(false);
           isInitializing.current = false;
         },
         
-        onplayerror: () => {
+        onplayerror: (id, err) => {
           if (!isMounted.current) return;
           if (!autoPlayExecuted.current && currentAutoPlayState.current) {
             console.log('Autoplay failed - this is normal browser behavior');
           } else {
-            setError('Failed to play audio');
+            console.error('Audio play error:', err);
+            setError('Failed to play audio: ' + (err as any)?.message || 'Unknown error');
           }
           setIsPlaying(false);
           isInitializing.current = false;
@@ -350,7 +358,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
     } catch (err) {
       console.error('Init error:', err);
-      setError('Audio initialization failed');
+      setError('Audio initialization failed: ' + (err as Error)?.message || 'Unknown error');
       setIsLoading(false);
       isInitializing.current = false;
     }
@@ -369,7 +377,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [audioUrl]);
+  }, [audioUrl, initializeAudio]); // Added initializeAudio to dependency array
 
   // Progress saving interval
   useEffect(() => {
@@ -434,7 +442,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const clampedVolume = Math.min(2, Math.max(0, newVolume));
     setVolume(clampedVolume);
     
-    // Apply volume directly to Howler (it supports values > 1)
+    // Apply volume directly to the sound instance
     soundRef.current.volume(isMuted ? 0 : clampedVolume);
     
     // Update mute state
