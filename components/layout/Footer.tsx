@@ -40,7 +40,7 @@ const Footer = () => {
             <div className="mt-6">
               <p className="text-gray-300 text-sm mb-2">Help us keep the WebApp alive!</p>
               <a 
-                href="https://buymeacoffee.com/noveltavern" 
+                href="https://ko-fi.com/noveltavern" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-sm font-medium transition-colors"
