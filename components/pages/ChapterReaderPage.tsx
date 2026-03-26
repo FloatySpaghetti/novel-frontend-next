@@ -7,7 +7,6 @@ import { useAppSelector } from "@/hooks/redux";
 import AudioPlayer from "@/components/chapter/AudioPlayer";
 import ChapterNavigation from "@/components/chapter/ChapterNavigation";
 import ChapterSelector from "@/components/chapter/ChapterSelector";
-import AdBanner from '@/components/ads/adbanner';
 import { ArrowLeft, BookOpen, PlayCircle } from "lucide-react";
 
 interface ChapterPreferences {
@@ -99,33 +98,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
       }
     }
   }, [preferences]);
-
-  // ✅ Inject SocialBar script in document head for better React compatibility
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const scriptId = '_mNScriptTag_27d72879876998e556c48fcae6fb7203';
-
-      // Don't add script if it already exists
-      if (document.getElementById(scriptId)) return;
-
-      // Create script element
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://degreeeruptionpredator.com/27/d7/28/27d72879876998e556c48fcae6fb7203.js';
-      script.async = true;
-
-      // Add to head instead of body for better React compatibility
-      document.head.appendChild(script);
-
-      // Cleanup function to remove script when component unmounts
-      return () => {
-        const scriptElement = document.getElementById(scriptId);
-        if (scriptElement?.parentNode) {
-          scriptElement.parentNode.removeChild(scriptElement);
-        }
-      };
-    }
-  }, []);
 
   // Get progress data
   const progressKey = novelId && chapterId ? `${novelId}-${chapterId}` : "";
@@ -390,13 +362,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
             />
           </div>
 
-          {/* Ad Slot 1 - Centered */}
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex justify-center">
-              <AdBanner /> {/* Remove loadDelay prop */}
-            </div>
-          </div>
-
           {/* Chapter Text Content */}
           <div
             className={`prose max-w-none ${
@@ -407,13 +372,6 @@ const ChapterReaderClient: React.FC<ChapterReaderClientProps> = ({
               __html: formatChapterContent(selectedChapter.content_text),
             }}
           />
-
-          {/* Ad Slot 2 - Before Bottom Navigation */}
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex justify-center">
-              <AdBanner />
-            </div>
-          </div>
 
           {/* Bottom Chapter Navigation */}
           <div className="mt-12">
