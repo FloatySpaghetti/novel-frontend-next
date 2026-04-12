@@ -1,6 +1,4 @@
 // app/sitemap/[page]/route.ts
-// Each chunk builds its OWN data independently — no shared cache needed.
-// Google hits /sitemap/1.xml, /sitemap/2.xml, etc.
 
 import { NextResponse } from "next/server";
 import { CHUNK_SIZE, SitemapUrl } from "@/lib/sitemap-cache";
@@ -107,11 +105,14 @@ export const revalidate = 3600;
 
 export async function GET(
   _request: Request,
-  { params }: { params: { page: string } }
+  { params }: { params: Promise<{ page: string }> }  // ← Next.js 15+: params is a Promise
 ) {
   try {
-    const pageParam = params.page.replace(/\.xml$/, "");
-    const page = parseInt(pageParam, 10);
+    // IMPORTANT: await params before accessing properties
+    const { page: pageParam } = await params;
+
+    const pageStr = pageParam.replace(/\.xml$/, "");
+    const page = parseInt(pageStr, 10);
 
     if (isNaN(page) || page < 1) {
       return new NextResponse("Not Found", { status: 404 });
