@@ -8,4 +8,4 @@ export type SitemapUrl = {
   priority?: string;
 };
 
-export const CHUNK_SIZE = 50000;
+export const CHUNK_SIZE = 15000; // Changed from 50000 to 15000
