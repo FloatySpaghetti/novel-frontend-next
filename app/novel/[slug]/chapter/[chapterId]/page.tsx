@@ -96,9 +96,14 @@ export async function generateMetadata({
     const title = `${novelTitle} [Chapter - ${chapterNumber}] : ${chapterTitle}. read listen ${novelTitle} - ${chapterNumber} : ${chapterTitle} novel audiobook full online for free, NovelTavern.`;
     const description = `Read, listen to ${novelTitle} - ${chapterNumber} : ${chapterTitle} novel audio update online for free. ${truncatedContent}`;
 
+    const canonicalUrl = `https://noveltavern.com/novel/${slug}/chapter/${chapterId}`;
+
     return {
       title,
       description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
         title,
         description,
