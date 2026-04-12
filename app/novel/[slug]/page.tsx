@@ -155,7 +155,7 @@ export async function generateMetadata({
         creator: "@noveltavern",
       },
       alternates: {
-        canonical: `/novel/${slug}`,
+        canonical: `https://noveltavern.com/novel/${slug}`,
       },
     };
   } catch (error) {
