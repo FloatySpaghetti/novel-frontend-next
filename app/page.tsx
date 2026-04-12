@@ -1,7 +1,28 @@
 import HomePage from "@/components/pages/HomePage";
 import React from "react";
+import { Metadata } from "next";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+export const metadata: Metadata = {
+  title: "NovelTavern - Read & Listen to Novels Online for Free",
+  description: "Discover thousands of novels and audiobooks to read and listen online for free. Enjoy romance, fantasy, cultivation, translated novels & more on NovelTavern.",
+  alternates: {
+    canonical: "https://noveltavern.com",
+  },
+  openGraph: {
+    title: "NovelTavern - Read & Listen to Novels Online for Free",
+    description: "Discover thousands of novels and audiobooks to read and listen online for free. Enjoy romance, fantasy, cultivation, translated novels & more on NovelTavern.",
+    url: "https://noveltavern.com",
+    siteName: "NovelTavern",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NovelTavern - Read & Listen to Novels Online for Free",
+    description: "Discover thousands of novels and audiobooks to read and listen online for free.",
+  },
+};
 
 async function getNovels() {
   try {
