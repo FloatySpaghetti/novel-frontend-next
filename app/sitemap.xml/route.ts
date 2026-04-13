@@ -1,6 +1,6 @@
 // app/sitemap.xml/route.ts
-// Statically generated at build time — regenerates every hour via revalidate.
-// Returns a sitemap index pointing to /sitemap/1.xml, /sitemap/2.xml, etc.
+// Dynamic sitemap index — runs on demand when Google crawls it.
+// No build-time fetching = no 2MB cache errors.
 
 import { NextResponse } from "next/server";
 import { CHUNK_SIZE } from "@/lib/sitemap-cache";
@@ -11,7 +11,7 @@ const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173").re
 const getNovels = async () => {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/novels`, {
-      next: { revalidate: 3600 },
+      cache: "no-store",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
     });
     if (!res.ok) throw new Error(`Novels fetch failed: ${res.status}`);
@@ -28,7 +28,7 @@ const getChapters = async (novelId: string) => {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/chapters/novel/${encodeURIComponent(novelId)}?limit=1000000`,
       {
-        next: { revalidate: 3600 },
+        cache: "no-store", // prevent 2MB cache error
         headers: { Accept: "application/json", "Content-Type": "application/json" },
       }
     );
@@ -41,7 +41,7 @@ const getChapters = async (novelId: string) => {
   }
 };
 
-export async function buildAllUrls() {
+async function buildAllUrls() {
   const staticPaths = [
     "browse", "genres", "contact", "terms",
     "privacy", "search", "signin", "signup", "profile",
@@ -87,14 +87,12 @@ export async function buildAllUrls() {
     }
   }
 
-  console.log(`✅ Total URLs built: ${urls.length}`);
+  console.log(`✅ Total URLs: ${urls.length}`);
   return urls;
 }
 
-// ── Static generation ──────────────────────────────────────────────────────
-// force-static = generated at build time, refreshed every revalidate seconds
-export const dynamic = "force-static";
-export const revalidate = 3600; // regenerate every hour
+export const dynamic = "force-dynamic"; // no build-time fetching
+export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -115,7 +113,9 @@ ${Array.from({ length: totalChunks }, (_, i) => `  <sitemap>
     return new NextResponse(sitemapIndex, {
       headers: {
         "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "CDN-Cache-Control": "no-store",
+        "Cloudflare-CDN-Cache-Control": "no-store",
       },
     });
   } catch (error) {

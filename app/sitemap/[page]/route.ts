@@ -1,26 +1,93 @@
 // app/sitemap/[page]/route.ts
-// Statically pre-generates ALL chunk pages at build time using generateStaticParams.
-// Each chunk is a separate static file — /sitemap/1.xml, /sitemap/2.xml, etc.
+// Dynamic chunk route — runs on demand, no build-time fetching.
+// Each chunk fetches its own data independently.
 
 import { NextResponse } from "next/server";
 import { CHUNK_SIZE, SitemapUrl } from "@/lib/sitemap-cache";
-import { buildAllUrls } from "@/app/sitemap.xml/route";
+import { slugify } from "@/lib/utils";
 
-// ── Tell Next.js which chunk pages to pre-generate at build time ───────────
-export async function generateStaticParams() {
+const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
+
+const getNovels = async () => {
   try {
-    const urls = await buildAllUrls();
-    const totalChunks = Math.ceil(urls.length / CHUNK_SIZE);
-    console.log(`✅ Pre-generating ${totalChunks} sitemap chunks at build time`);
-
-    // Returns [{ page: "1" }, { page: "2" }, ...] for each chunk
-    return Array.from({ length: totalChunks }, (_, i) => ({
-      page: String(i + 1),
-    }));
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/novels`, {
+      cache: "no-store",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error(`Novels fetch failed: ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data.data) ? data.data : [];
   } catch (error) {
-    console.error("❌ Error in generateStaticParams for sitemaps:", error);
-    return [{ page: "1" }]; // fallback: at least generate chunk 1
+    console.error("❌ Failed to fetch novels:", error);
+    return [];
   }
+};
+
+const getChapters = async (novelId: string) => {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/chapters/novel/${encodeURIComponent(novelId)}?limit=1000000`,
+      {
+        cache: "no-store", // prevent 2MB cache error
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) throw new Error(`Chapters fetch failed: ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data.data) ? data.data : [];
+  } catch (error) {
+    console.error(`❌ Failed to fetch chapters for novel ${novelId}:`, error);
+    return [];
+  }
+};
+
+async function buildAllUrls(): Promise<SitemapUrl[]> {
+  const staticPaths = [
+    "browse", "genres", "contact", "terms",
+    "privacy", "search", "signin", "signup", "profile",
+  ];
+
+  const urls: SitemapUrl[] = [
+    { loc: `${baseUrl}/`, lastmod: new Date().toISOString(), changefreq: "daily", priority: "1.0" },
+    ...staticPaths.map((path) => ({
+      loc: `${baseUrl}/${path}`,
+      lastmod: new Date().toISOString(),
+      changefreq: "weekly",
+      priority: "0.8",
+    })),
+  ];
+
+  const novels = await getNovels();
+  console.log(`✅ Fetched ${novels.length} novels for sitemap chunk`);
+
+  for (const novel of novels) {
+    if (!novel?.title) continue;
+    const slug = slugify(novel.title);
+
+    urls.push({
+      loc: `${baseUrl}/novel/${slug}`,
+      lastmod: novel.updated_at || novel.created_at || new Date().toISOString(),
+      changefreq: "weekly",
+      priority: "0.9",
+    });
+
+    try {
+      const chapters = await getChapters(novel.id?.toString() || novel.title);
+      for (const chapter of chapters) {
+        if (!chapter?.chapter_number) continue;
+        urls.push({
+          loc: `${baseUrl}/novel/${slug}/chapter/${chapter.chapter_number}`,
+          lastmod: chapter.updated_at || chapter.created_at || new Date().toISOString(),
+          changefreq: "monthly",
+          priority: "0.7",
+        });
+      }
+    } catch (err) {
+      console.error(`❌ Skipped chapters for ${novel.title}:`, err);
+    }
+  }
+
+  return urls;
 }
 
 function renderUrlset(urls: SitemapUrl[]) {
@@ -35,9 +102,8 @@ ${urls.map((url) => `  <url>
 </urlset>`;
 }
 
-// ── Static generation ──────────────────────────────────────────────────────
-export const dynamic = "force-static";
-export const revalidate = 3600;
+export const dynamic = "force-dynamic"; // no build-time fetching
+export const revalidate = 0;
 
 export async function GET(
   _request: Request,
@@ -63,12 +129,14 @@ export async function GET(
     const end = start + CHUNK_SIZE;
     const chunkUrls = allUrls.slice(start, end);
 
-    console.log(`✅ Generated sitemap chunk ${page}/${totalChunks} (${chunkUrls.length} URLs)`);
+    console.log(`✅ Serving sitemap chunk ${page}/${totalChunks} (${chunkUrls.length} URLs)`);
 
     return new NextResponse(renderUrlset(chunkUrls), {
       headers: {
         "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "CDN-Cache-Control": "no-store",
+        "Cloudflare-CDN-Cache-Control": "no-store",
       },
     });
   } catch (error) {
