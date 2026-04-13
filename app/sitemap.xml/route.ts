@@ -1,8 +1,10 @@
 // app/sitemap.xml/route.ts
+// Statically generated at build time — regenerates every hour via revalidate.
+// Returns a sitemap index pointing to /sitemap/1.xml, /sitemap/2.xml, etc.
 
 import { NextResponse } from "next/server";
 import { CHUNK_SIZE } from "@/lib/sitemap-cache";
-import { slugify } from "@/lib/utils"; // ← import from utils.ts (single source of truth)
+import { slugify } from "@/lib/utils";
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
 
@@ -26,7 +28,7 @@ const getChapters = async (novelId: string) => {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/chapters/novel/${encodeURIComponent(novelId)}?limit=1000000`,
       {
-        cache: "no-store",
+        next: { revalidate: 3600 },
         headers: { Accept: "application/json", "Content-Type": "application/json" },
       }
     );
@@ -39,7 +41,7 @@ const getChapters = async (novelId: string) => {
   }
 };
 
-async function buildAllUrls() {
+export async function buildAllUrls() {
   const staticPaths = [
     "browse", "genres", "contact", "terms",
     "privacy", "search", "signin", "signup", "profile",
@@ -56,7 +58,7 @@ async function buildAllUrls() {
   ];
 
   const novels = await getNovels();
-  console.log(`✅ Fetched ${novels.length} novels for sitemap index`);
+  console.log(`✅ Fetched ${novels.length} novels for sitemap`);
 
   for (const novel of novels) {
     if (!novel?.title) continue;
@@ -85,11 +87,14 @@ async function buildAllUrls() {
     }
   }
 
+  console.log(`✅ Total URLs built: ${urls.length}`);
   return urls;
 }
 
-export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+// ── Static generation ──────────────────────────────────────────────────────
+// force-static = generated at build time, refreshed every revalidate seconds
+export const dynamic = "force-static";
+export const revalidate = 3600; // regenerate every hour
 
 export async function GET() {
   try {
@@ -97,7 +102,7 @@ export async function GET() {
     const totalChunks = Math.ceil(urls.length / CHUNK_SIZE);
     const now = new Date().toISOString();
 
-    console.log(`✅ Sitemap index: ${urls.length} total URLs → ${totalChunks} chunks`);
+    console.log(`✅ Sitemap index: ${urls.length} URLs → ${totalChunks} chunks`);
 
     const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -110,9 +115,7 @@ ${Array.from({ length: totalChunks }, (_, i) => `  <sitemap>
     return new NextResponse(sitemapIndex, {
       headers: {
         "Content-Type": "application/xml",
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        "CDN-Cache-Control": "no-store",
-        "Cloudflare-CDN-Cache-Control": "no-store",
+        "Cache-Control": "public, max-age=3600, s-maxage=3600",
       },
     });
   } catch (error) {
