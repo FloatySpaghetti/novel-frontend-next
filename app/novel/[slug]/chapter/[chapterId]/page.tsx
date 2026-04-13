@@ -1,5 +1,6 @@
 import ChapterReaderClient from "@/components/pages/ChapterReaderPage";
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { cache } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
@@ -75,6 +76,7 @@ export async function generateMetadata({
       return {
         title: "Chapter Not Found | Novel Tavern",
         description: "The requested chapter could not be found.",
+        robots: { index: false, follow: false }, // ← tell Google not to index missing chapters
       };
     }
 
@@ -177,21 +179,7 @@ export default async function ChapterReaderPage({
     const chapters = novelResponse?.data?.chapters || [];
 
     if (!selectedNovel || !selectedChapter) {
-      return (
-        <div className="pt-20 min-h-screen container mx-auto px-4">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-serif font-bold text-primary-900 mb-4">
-              Chapter Not Found
-            </h2>
-            <p className="text-gray-600 mb-6">
-              The chapter you are looking for does not exist or has been removed.
-            </p>
-            <p className="text-sm text-gray-500 mb-6">
-              Debug: Novel ID: {novelId}, Chapter ID: {chapterId}
-            </p>
-          </div>
-        </div>
-      );
+      notFound(); // ← returns proper 404 HTTP status — fixes soft 404 in Google Search Console
     }
 
     // Optimized structured data (no duplication)
