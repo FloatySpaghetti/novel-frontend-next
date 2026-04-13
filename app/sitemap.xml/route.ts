@@ -1,13 +1,10 @@
 // app/sitemap.xml/route.ts
-// Sitemap INDEX — counts total URLs and lists chunk sitemaps.
-// Does NOT need to fetch all chapters, just needs the total count.
 
 import { NextResponse } from "next/server";
 import { CHUNK_SIZE } from "@/lib/sitemap-cache";
+import { slugify } from "@/lib/utils"; // ← import from utils.ts (single source of truth)
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
-
-const slugify = (str: string) => str?.trim().replace(/\s+/g, "-").toLowerCase();
 
 const getNovels = async () => {
   try {
@@ -64,6 +61,7 @@ async function buildAllUrls() {
   for (const novel of novels) {
     if (!novel?.title) continue;
     const slug = slugify(novel.title);
+
     urls.push({
       loc: `${baseUrl}/novel/${slug}`,
       lastmod: novel.updated_at || novel.created_at || new Date().toISOString(),
@@ -112,7 +110,9 @@ ${Array.from({ length: totalChunks }, (_, i) => `  <sitemap>
     return new NextResponse(sitemapIndex, {
       headers: {
         "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "CDN-Cache-Control": "no-store",
+        "Cloudflare-CDN-Cache-Control": "no-store",
       },
     });
   } catch (error) {
